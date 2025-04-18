@@ -107,4 +107,6 @@ We'll evaluate your solution based on:
 
 When you're ready, send us your solution as a Git repository. Make sure to include instructions for running your solution if they differ from the above.
 
+You may also submit a README.md to accompany your solution, to explain any decisions made or enhancements you would make with more time.
+
 Good luck!
