@@ -1,14 +1,6 @@
-# Stasher Backend Interview Challenge
+# Stasher Interview Backend Solution
 
-Welcome to the Stasher backend interview challenge! This project is a simplified version of our bag storage platform, where travelers can find locations to store their luggage.
-
-## Task Overview
-
-Your task is to implement a search feature that allows users to find available stashpoints (bag storage locations) based on:
-
-- Location (latitude/longitude)
-- Desired drop-off and pick-up times
-- Number of bags to store
+Solution by Delkys Welffer for Stasher interview challenge[https://github.com/stasher-city/backend-test]
 
 ## Getting Started
 
@@ -66,47 +58,145 @@ You need to enhance the stashpoints endpoint to allow filtering by availability.
 
 3. Results should be ordered by distance from the search coordinates
 
-### Example Request
+# The Solution
 
+## Get All Stashpoints
+
+To retrieve all stashpoints without any filtering:
+
+```bash
+GET /api/v1/stashpoints/
 ```
-GET /api/v1/stashpoints/?lat=51.5074&lng=-0.1278&dropoff=2023-04-20T10:00:00Z&pickup=2023-04-20T18:00:00Z&bag_count=2&radius_km=5
+
+## Search Stashpoints with Query Parameters
+
+To search for stashpoints based on location, time, and capacity requirements:
+
+```bash
+GET /api/v1/stashpoints/?lat=51.5074&lng=-0.1278&dropoff=2024-01-15T10:00:00Z&pickup=2024-01-15T18:00:00Z&bag_count=2&radius_km=5.0
 ```
 
-### Response Format
+### Query Parameters
 
-The response should be a JSON array of available stashpoints, with each stashpoint containing at least:
+- **lat** (required): Latitude for the search location (e.g., 51.5074)
+- **lng** (required): Longitude for the search location (e.g., -0.1278)
+- **dropoff** (required): ISO datetime when bags will be dropped off (e.g., 2024-01-15T10:00:00Z)
+- **pickup** (required): ISO datetime when bags will be picked up (e.g., 2024-01-15T18:00:00Z)
+- **bag_count** (required): Number of bags to store (must be greater than 0)
+- **radius_km** (optional): Search radius in kilometers (e.g., 5.0)
+
+### Example Response
 
 ```json
 [
   {
     "id": "abc123",
-    "name": "Central Cafe Storage",
-    "address": "123 Main Street",
-    "latitude": 51.5107,
-    "longitude": -0.1246,
-    "distance_km": 0.5,
-    "capacity": 20,
-    "available_capacity": 15,
+    "name": "Central Station Storage",
+    "description": "Secure storage near the main station",
+    "address": "123 Station Road",
+    "postal_code": "SW1A 1AA",
+    "latitude": 51.5074,
+    "longitude": -0.1278,
+    "capacity": 50,
     "open_from": "08:00",
-    "open_until": "22:00"
+    "open_until": "22:00",
+    "distance_km": 0.5
   },
-  ...
+  {
+    "id": "def456",
+    "name": "Airport Express Storage",
+    "description": "24/7 storage facility",
+    "address": "456 Airport Way",
+    "postal_code": "SW1A 2BB",
+    "latitude": 51.5144,
+    "longitude": -0.1226,
+    "capacity": 100,
+    "open_from": "00:00",
+    "open_until": "23:59",
+    "distance_km": 1.2
+  }
 ]
 ```
 
-## Evaluation Criteria
+### Error Response Examples
 
-We'll evaluate your solution based on:
+#### Missing Required Parameters
 
-- Correctness: Does it return the correct stashpoints?
-- Code quality: Is your code clean and well-organized?
-- Edge cases: How does your solution handle edge cases?
-- Performance: How efficient is your solution?
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    {
+      "field": "lat",
+      "message": "field required",
+      "type": "value_error.missing"
+    },
+    {
+      "field": "lng",
+      "message": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
 
-## Submission
+#### Invalid Parameter Values
 
-When you're ready, send us your solution as a Git repository. Make sure to include instructions for running your solution if they differ from the above.
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    {
+      "field": "lat",
+      "message": "Latitude must be between -90 and 90",
+      "type": "value_error"
+    }
+  ]
+}
+```
 
-You may also submit a README.md to accompany your solution, to explain any decisions made or enhancements you would make with more time.
+#### Pickup Before Dropoff
 
-Good luck!
+```json
+{
+  "error": "Validation failed",
+  "details": [
+    {
+      "field": "pickup",
+      "message": "Pickup time must be after dropoff time",
+      "type": "value_error"
+    }
+  ]
+}
+```
+
+### Filtering Logic
+
+The endpoint returns only stashpoints that meet ALL of the following criteria:
+
+1. **Distance**: Are within the specified radius of the coordinates (if radius_km is provided)
+2. **Capacity**: Have enough capacity for the requested number of bags during the specified time period
+   - Checks existing bookings that overlap with the requested dropoff-pickup period
+   - Cancelled bookings are not counted against capacity
+3. **Opening Hours**: Are open during BOTH the requested drop-off and pick-up times
+   - The stashpoint must be open at the exact dropoff time or after
+   - The stashpoint must be open at the exact pickup time or before
+
+Results are ordered by distance from the search coordinates (closest first).
+
+## Running tests
+
+### Run all tests
+```bash
+docker-compose run --rm app pytest app/tests/
+```
+
+### Run specific test file
+```bash
+docker-compose run --rm app pytest app/tests/stashpoints.py
+```
+
+### Run with verbose output
+```bash
+docker-compose run --rm app pytest app/tests/ -v
+```

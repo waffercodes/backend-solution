@@ -26,6 +26,16 @@ class ProdConfig(Config):
     DEBUG = False
 
 
+class TestConfig(Config):
+    """Test config."""
+    
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost/stasher_interview_test"
+    )
+    WTF_CSRF_ENABLED = False
+
+
 def get_config():
     env = os.environ.get("FLASK_ENV", "development")
     if env == "production":
